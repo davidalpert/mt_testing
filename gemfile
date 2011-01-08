@@ -18,6 +18,7 @@ group :runtime do
 	gem 'structuremap.automocking', '~> 2.6.1.1'
 	gem 'nunit'
 	gem 'xunitnet'
+	gem 'moq'
 end
 
 group :tools do

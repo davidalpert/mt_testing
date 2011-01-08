@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using MavenThought.Commons.Testing.Example;
-using Rhino.Mocks;
 using SharpTestsEx;
 
 namespace MavenThought.Commons.Testing.Tests
@@ -33,11 +32,11 @@ namespace MavenThought.Commons.Testing.Tests
 
             foreach (var pair in _movies)
             {
-                var m = Mock<IMovie>();
+                var m = MockOf<IMovie>();
 
                 var localPair = pair;
 
-                Dep<IMovieFactory>().Stub(f => f.Create(localPair.Key, localPair.Value)).Return(m);
+                Configure<IMovieFactory>().Setup(f => f.Create(localPair.Key, localPair.Value)).Returns(m);
 
                 this._expected.Add(m);
             }

@@ -1,5 +1,5 @@
 using MavenThought.Commons.Testing.Example;
-using Rhino.Mocks;
+using Moq;
 using SharpTestsEx;
 
 namespace MavenThought.Commons.Testing.Tests
@@ -24,9 +24,9 @@ namespace MavenThought.Commons.Testing.Tests
         {
             base.GivenThat();
 
-            this._movie = Mock<IMovie>();
+            this._movie = MockOf<IMovie>();
 
-            Dep<IPosterService>().Stub(s => s.FindPoster(this._movie)).Return("MyPoster");
+            Configure<IPosterService>().Setup(s => s.FindPoster(this._movie)).Returns("MyPoster");
         }
 
         /// <summary>

@@ -2,9 +2,9 @@
 using System.ComponentModel;
 using System.Linq.Expressions;
 using Microsoft.Practices.ServiceLocation;
-using Rhino.Mocks;
-using StructureMap.AutoMocking;
 using Xunit;
+using Moq;
+using Moq.Language.Flow;
 
 namespace MavenThought.Commons.Testing
 {
@@ -17,9 +17,54 @@ namespace MavenThought.Commons.Testing
         : BaseTestWithSut<TContract> where TSut : class, TContract
     {
         /// <summary>
-        /// Gets the auto mocker instance
+        /// Gets or sets the auto mocking container.
         /// </summary>
-        protected RhinoAutoMocker<TSut> AutoMocker { get; private set; }
+        /// <value>The auto mocking container.</value>
+        protected AutoMockContainer Container { get; private set; }
+
+        protected MockFactory MockRepository { get; private set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether <see cref="MockFactory.VerifyAll"/> will be used or <see cref="MockFactory.Verify"/>.
+        /// </summary>
+        /// <value><c>true</c> to use <see cref="MockFactory.VerifyAll"/>; otherwise, <c>false</c>.</value>
+        /// <remarks><c>false</c> be default.</remarks>
+        public bool VerifyAll { get; set; }
+
+        /// <summary>
+        /// Initializes a new instance of the AutoMockBaseTest class.
+        /// </summary>
+        public AutoMockBaseTest()
+        {
+            this.PartialMockSut(); // Moq's default behavior
+        }
+
+        /// <summary>
+        /// Changes mocks behavior to <see cref="MockBehavior.Strict"/>.
+        /// </summary>
+        public void UseStrict()
+        {
+            this.MockRepository = new MockFactory(MockBehavior.Strict);
+            this.Container = new AutoMockContainer(this.MockRepository);
+        }
+
+        /// <summary>
+        /// Forces factory verification.
+        /// </summary>
+        /// <remarks>This is called automatically by xUnit.</remarks>
+        public override void Dispose()
+        {
+            if (this.VerifyAll)
+            {
+                this.MockRepository.VerifyAll();
+            }
+            else
+            {
+                this.MockRepository.Verify();
+            }
+
+            base.Dispose();
+        }
 
         /// <summary>
         /// Gets the concrete instance
@@ -34,17 +79,42 @@ namespace MavenThought.Commons.Testing
         /// </summary>
         public void PartialMockSut()
         {
-            this.AutoMocker.PartialMockTheClassUnderTest();
+            this.MockRepository = new MockFactory(MockBehavior.Strict);
+            this.Container = new AutoMockContainer(this.MockRepository);
         }
 
         /// <summary>
-        /// Dependency getter
+        /// Gets a dependency out of the automocking container.
         /// </summary>
         /// <typeparam name="T">Type of the dependency</typeparam>
         /// <returns>The auto mocker dependency</returns>
         public T Dep<T>() where T : class
         {
-            return this.AutoMocker.Get<T>();
+            return this.Container.Resolve<T>();
+        }
+
+        /// <summary>
+        /// Helper method to get the <see cref="Mock<T>"/> of a given 
+        /// object which Moq requires for setting expectations
+        /// </summary>
+        /// <param name="mockedObject">The mocked object</param>
+        /// <typeparam name="T">Type of the mocked object</typeparam>
+        /// <returns>The <see cref="Mock<T>"/> associated with 
+        /// the mocked object</returns>
+        public Mock<T> MockOf<T>(T mockedObject) where T : class
+        {
+            return Moq.Mock.Get(mockedObject);
+        }
+
+        /// <summary>
+        /// Grabs the <see cref="Mock<T>"/> of a given
+        /// dependency (as pulled out of the container)
+        /// </summary>
+        /// <typeparam name="T">The type of dependency to pull out</typeparam>
+        /// <returns>The <see cref="Mock<T>"/> associated with a given type T</returns>
+        public Mock<T> Configure<T>() where T : class
+        {
+            return MockOf(Dep<T>());
         }
 
         /// <summary>
@@ -53,7 +123,7 @@ namespace MavenThought.Commons.Testing
         /// <returns>The result of obtaining the class under test</returns>
         protected override TContract CreateSut()
         {
-            return this.AutoMocker.ClassUnderTest;
+            return this.Container.Create<TSut>();
         }
 
         /// <summary>
@@ -62,9 +132,16 @@ namespace MavenThought.Commons.Testing
         /// <typeparam name="TTarget">Target of the stub</typeparam>
         /// <typeparam name="TResult">Type of the dependency</typeparam>
         /// <param name="fn">Function to stub</param>
-        protected void Stub<TTarget, TResult>(Function<TTarget, TResult> fn) where TResult : class where TTarget : class
+        protected ISetup<TTarget, TResult> Stub<TTarget, TResult>(Expression<Func<TTarget, TResult>> fn) where TResult : class where TTarget : class
         {
-            Dep<TTarget>().Stub(fn).Return(Dep<TResult>());
+            // get the dependency from the container
+            TTarget dependency = Dep<TTarget>();
+
+            // get the Mock for which dependency is a Mock.object
+            var moq = Moq.Mock.Get<TTarget>(dependency);
+
+            // set the given expectation
+            return moq.Setup(fn);
         }
 
         /// <summary>
@@ -73,8 +150,6 @@ namespace MavenThought.Commons.Testing
         protected override void BeforeEachTest()
         {
             base.BeforeEachTest();
-
-            this.AutoMocker = new RhinoAutoMocker<TSut>(MockMode.AAA);
         }
 
         /// <summary>
@@ -89,12 +164,12 @@ namespace MavenThought.Commons.Testing
         }
 
         /// <summary>
-        /// Stubs the service locator to return an instance of T
+        /// Stubs the service locator to return a resolved instance of T
         /// </summary>
         /// <typeparam name="T">Type of the service</typeparam>
         protected void StubService<T>() where T : class
         {
-            Stub<IServiceLocator, T>(srv => srv.GetInstance<T>());
+            Stub<IServiceLocator, T>(srv => srv.GetInstance<T>()).Returns(Container.Resolve<T>());
         }
 
         /// <summary>
@@ -116,4 +191,16 @@ namespace MavenThought.Commons.Testing
             Dep<TSource>().RaisePropertyChanged(expression);
         }
     }
+public static class MyClass
+{
+	
+        public static ISetup<TTarget, TResult> Stub<TTarget, TResult>(this TTarget target, Expression<Func<TTarget, TResult>> fn) where TResult : class where TTarget : class
+        {
+            // get the Mock for which dependency is a Mock.object
+            var moq = Moq.Mock.Get<TTarget>(target);
+
+            // set the given expectation
+            return moq.Setup(fn);
+        }
+}
 }

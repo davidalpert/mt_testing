@@ -1,6 +1,6 @@
 using System;
 using MavenThought.Commons.Testing.Example;
-using Rhino.Mocks;
+using Moq;
 using SharpTestsEx;
 
 namespace MavenThought.Commons.Testing.Tests
@@ -21,9 +21,9 @@ namespace MavenThought.Commons.Testing.Tests
         {
             base.GivenThat();
 
-            this._movie = Mock<IMovie>();
+            this._movie = MockOf<IMovie>();
 
-            this._handler = Mock<EventHandler<MediaLibraryArgs>>();
+            this._handler = MockOf<EventHandler<MediaLibraryArgs>>();
         }
 
         /// <summary>
@@ -59,9 +59,9 @@ namespace MavenThought.Commons.Testing.Tests
         [It]
         public void Should_notify_the_movie_was_added()
         {
-                this._handler.AssertWasCalled(h => h(Arg.Is(this.Sut),
-                                                     Arg<MediaLibraryArgs>
-                                                     .Matches(arg => arg.Movie == this._movie)));
+             MockOf(this._handler).Verify(h => h(this.Sut,
+                                                 It.Is<MediaLibraryArgs>(
+                                                    arg => arg.Movie == this._movie)));
         }
     }
 }

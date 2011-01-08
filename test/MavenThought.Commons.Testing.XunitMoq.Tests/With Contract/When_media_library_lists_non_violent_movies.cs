@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using MavenThought.Commons.Testing.Example;
-using Rhino.Mocks;
 using SharpTestsEx;
 
 namespace MavenThought.Commons.Testing.Tests
@@ -27,14 +26,14 @@ namespace MavenThought.Commons.Testing.Tests
 
             for (var i = 0; i < 10; i++)
             {
-                this._movies.Add(Mock<IMovie>());
+                this._movies.Add(MockOf<IMovie>());
             }
 
             foreach (var movie in _movies.Take(5))
             {
                 var movie1 = movie;
                 
-                Dep<IMovieCritic>().Stub(c => c.IsViolent(movie1)).Return(true);
+                Configure<IMovieCritic>().Setup(c => c.IsViolent(movie1)).Returns(true);
             }
         }
 

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Linq.Expressions;
-using Rhino.Mocks;
+using Moq;
 
 namespace MavenThought.Commons.Testing
 {
@@ -17,7 +17,7 @@ namespace MavenThought.Commons.Testing
         /// <param name="propertyName">Property name to use in the event</param>
         public static void RaisePropertyChanged(this INotifyPropertyChanged mock, string propertyName)
         {
-            mock.Raise(mo => mo.PropertyChanged += null, mock, new PropertyChangedEventArgs(propertyName));
+            Mock.Get(mock).Raise(mo => mo.PropertyChanged += null, mock, new PropertyChangedEventArgs(propertyName));
         }
 
         /// <summary>
@@ -42,10 +42,9 @@ namespace MavenThought.Commons.Testing
         public static void AssertPropertyChangedWasCalled(this PropertyChangedEventHandler handler,
                                                           INotifyPropertyChanged sender, string propertyName)
         {
-            handler
-                .AssertWasCalled(h => h(Arg.Is(sender),
-                                        Arg<PropertyChangedEventArgs>
-                                            .Matches(args => args.PropertyName == propertyName)));
+            Mock.Get(handler).Verify(h => h(sender, 
+                                            It.Is<PropertyChangedEventArgs>(
+                                                args => args.PropertyName == propertyName)));
         }
 
         /// <summary>
@@ -71,10 +70,10 @@ namespace MavenThought.Commons.Testing
         /// <param name="propertyName">Property to check for</param>
         public static void AssertPropertyChangedWasCalled(this PropertyChangedEventHandler handler, string propertyName)
         {
-            handler
-                .AssertWasCalled(h => h(Arg<object>.Is.Anything,
-                                        Arg<PropertyChangedEventArgs>
-                                            .Matches(args => args.PropertyName == propertyName)));
+            Mock.Get(handler)
+                .Verify(h => h(It.IsAny<object>(), 
+                               It.Is<PropertyChangedEventArgs>(
+                                        args => args.PropertyName == propertyName)));
         }
 
         /// <summary>
@@ -97,7 +96,7 @@ namespace MavenThought.Commons.Testing
         /// <param name="handler">Handler to check for</param>
         public static void AssertPropertyChangedWasCalled(this PropertyChangedEventHandler handler)
         {
-            handler.AssertWasCalled(h => h(Arg<object>.Is.Anything, Arg<PropertyChangedEventArgs>.Is.Anything));
+            Mock.Get(handler).Verify(h => h(It.IsAny<object>(), It.IsAny<PropertyChangedEventArgs>()));
         }
 
         /// <summary>
@@ -109,9 +108,9 @@ namespace MavenThought.Commons.Testing
         public static void AssertPropertyChangedWasNotCalled(this PropertyChangedEventHandler handler,
                                                              INotifyPropertyChanged sender, string propertyName)
         {
-            handler
-                .AssertWasNotCalled(h => h(Arg.Is(sender), Arg<PropertyChangedEventArgs>
-                                                               .Matches(args => args.PropertyName == propertyName)));
+            Mock.Get(handler).Verify(h => h(sender, It.Is<PropertyChangedEventArgs>(
+                                    args => args.PropertyName == propertyName)), 
+                                    Times.Never());
         }
 
         /// <summary>
@@ -139,10 +138,10 @@ namespace MavenThought.Commons.Testing
         public static void AssertPropertyChangedWasNotCalled(this PropertyChangedEventHandler handler,
                                                              string propertyName)
         {
-            handler
-                .AssertWasNotCalled(h => h(Arg<object>.Is.Anything,
-                                           Arg<PropertyChangedEventArgs>
-                                               .Matches(args => args.PropertyName == propertyName)));
+            Mock.Get(handler).Verify(h => h(It.IsAny<object>(),
+                                            It.Is<PropertyChangedEventArgs>(
+                                                args => args.PropertyName == propertyName)), 
+                                            Times.Never());
         }
 
         /// <summary>
@@ -166,7 +165,8 @@ namespace MavenThought.Commons.Testing
         /// <param name="handler">Handler to extend</param>
         public static void AssertPropertyChangedWasNotCalled(this PropertyChangedEventHandler handler)
         {
-            handler.AssertWasNotCalled(h => h(Arg<object>.Is.Anything, Arg<PropertyChangedEventArgs>.Is.Anything));
+            Mock.Get(handler).Verify(h => h(It.IsAny<object>(), It.IsAny<PropertyChangedEventArgs>()), 
+                              Times.Never());
         }
     }
 }

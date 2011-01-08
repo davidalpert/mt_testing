@@ -18,7 +18,7 @@ namespace MavenThought.Commons.Testing.Tests
 
             for (var i = 0; i < 10; i++)
             {
-                this.Sut.Add(Mock<IMovie>());       
+                this.Sut.Add(MockOf<IMovie>());       
             }
         }
 
